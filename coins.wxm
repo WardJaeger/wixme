@@ -1,0 +1,39 @@
+fun coinChange(denominations, value) {
+  if (len(denominations) == 0) {
+    return value == 0 ? 1 : 0
+  }
+
+  var numCoins = [0]
+  for (var i = 1; i <= value; i++) {
+    numCoins += [nil]
+  }
+
+  fun helper(index) {
+    if (numCoins[index] != nil) {
+      return numCoins[index]
+    }
+
+    // I know, I'm breaking my own recommendation about infinite values.
+    // I think it's justified though, in this case.
+    var num = 1/0
+    for (var i = 0; i < len(denominations); i++) {
+      if (index >= denominations[i]) {
+        var prevNum = helper(index - denominations[i])
+        if (prevNum != nil and 
+            (num == nil or num > prevNum + 1)) {
+          num = prevNum + 1
+        }
+      }
+    }
+    return numCoins[index] = num
+  }
+
+  return helper(value)
+}
+
+print(coinChange([1, 5, 10],        8) == 4)
+print(coinChange([1, 5, 10, 25],   87) == 6)
+print(coinChange([5, 10, 25],      87) == 1/0)
+print(coinChange([1, 17, 30],      35) == 3)
+print(coinChange([1, 2, 3, 4],     15) == 4)
+print(coinChange([1, 62, 379],   1645) == 11)

@@ -1,0 +1,147 @@
+/*
+  The first way is a naive recursive approach.
+  - If a string has length 0, it converts in only one way.
+  - If a string starts with "0", it does not convert. (0 does not map to a character.)
+  - If a string starts with two digits that represent a number 26 or less, recurse twice:
+    - Once for converting the first digit by itself, and
+    - Twice for converting the pair of digits together.
+  - Otherwise, recurse only once for converting the first digit by itself.
+  This solution is not optimal, because many computations are repeated.
+
+  In the worst-case, this function is O(\phi ^ n), where \phi is the golden ratio.
+  This is because, with two recursions for each string, the total number of recursions is a Fibonacci number.
+*/
+fun countWays1(input) {
+  if (len(input) == 0) {
+    return 1
+  }
+  if (toNumber(input[0]) == 0) {
+    return 0
+  }
+  if (len(input) >= 2) {
+    if (toNumber(input[0:2]) <= 26) {
+      return countWays1(input[1:]) + countWays1(input[2:])
+    }
+  }
+  return countWays1(input[1:])
+}
+
+/*
+  The second way is just the naive approach with storage tacked on.
+  Everything is done as before, but now the subresults are recorded in a list.
+  This way, the count of a particular substring isn't computed multiple times.
+  Notably, this solution uses the functionality of closures and local functions.
+
+  In the worst-case, this function is O(n).
+  This is because each substring is recursed at most 2 times.
+*/
+fun countWays2(input) {
+  var ways = []
+  for (var i = 0; i < len(input); i++) {
+    ways += [nil]
+  }
+  ways += [1]
+
+  fun helper(index) {
+    if (ways[index] != nil) {
+      return ways[index]
+    }
+    if (toNumber(input[index]) == 0) {
+      return ways[index] = 0
+    }
+    if (index+1 < len(input)) {
+      if (toNumber(input[index:index+2]) <= 26) {
+        return ways[index] = helper(index+1) + helper(index+2)
+      }
+    }
+    return ways[index] = helper(index+1)
+  }
+
+  return helper(0)
+}
+
+/*
+  The third way is a very optimized solution, requiring only a simple change in perspective.
+  Note that the count of a string only depends on the counts of the two most recent substrings.
+  This means that we can iterate backwards through the input to find the total count.
+  - Initially, the count of an empty string is 1, while the count of any "negative string" is 0.
+  - Starting from the back of the input and gradually adding digits:
+    - If a substring starts with "0", it gets a count of 0.
+    - If a substring starts with two digits that represent a number 26 or less,
+      then its count is the sum of the counts of the two most recent substrings.
+    - Otherwise, the substring has the same count as the most recent substring.
+    - If at any point the current and previous counts are both 0, the total count is 0.
+  - Return the count of the most recent substring, i.e. the entire input.
+  By removing recursion and list storage, it uses significantly less memory and slightly less time.
+
+  In the worst-case, this function is O(n).
+  This is because the input is iterated over backwards.
+*/
+fun countWays3(input) {
+  // Initialize values
+  var count = 1
+  var prev1 = 0
+  var prev2
+
+  for (var i = len(input) - 1; i >= 0; i--) {
+    // Shift count storage
+    prev2 = prev1
+    prev1 = count
+
+    // Update count based on digits
+    if (toNumber(input[i]) == 0) {
+      count = 0
+    } else if (toNumber(input[i:i+2]) <= 26) {
+      count += prev2
+    }
+    
+    // Check for 0 case to terminate early
+    if (count == 0 and prev1 == 0) {
+      return 0
+    }
+  }
+  
+  return count
+}
+
+/*
+  This class contains a list of functions, which are compared against one another for speed and accuracy.
+  For a given input, every function in the list is run, its runtime is recorded, and their return values are compared.
+  These measurements are then outputed to stdout, for the user to review.
+*/
+class Benchmarks {
+  init(funcList) {
+    this.funcList = funcList
+  }
+  test(input) {
+    print("Benchmarks for input \"" + input + "\".")
+    var value
+    var sameResult = true
+    for (var i = 0; i < len(this.funcList); i++) {
+      var func = this.funcList[i]
+      var start = clock()
+      var currValue = func(input)
+      var end = clock()
+
+      print( toString(func) + " " + toString(currValue)
+        + " (" + toString(end-start) + " sec)" )
+
+      sameResult = sameResult and (i == 0 or value == currValue)
+      value = currValue
+    }
+    print("Answer: " + (sameResult ? toString(value) : "INCONCLUSIVE"))
+    print("")
+  }
+}
+
+var slowBenchmarks = Benchmarks([countWays1, countWays2, countWays3])
+slowBenchmarks.test("12034659273464573932761531224521112134275223641234112346272318234")
+slowBenchmarks.test("11111111111111111111111111")
+slowBenchmarks.test("19238746125346527354976463792181737997738334123121232171356172150")
+
+var fastBenchmarks = Benchmarks([countWays2, countWays3])
+var hardDigits = "123456789"
+while (len(hardDigits) < 2500) {
+  hardDigits += hardDigits
+}
+fastBenchmarks.test(hardDigits)
